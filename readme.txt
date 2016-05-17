@@ -1,7 +1,7 @@
-Smoove V0.92
+Smoove V0.93
 
 Pixel, Tile and Spriteeditor for PSPLua.
-(c) 2006 Martin Wisniowski (020200 aka Nodepond)
+(c) 2006 - 2016 Martin Wisniowski (020200 aka Nodepond)
 http://digitaltools.node3000.com/downloads/smoove/
 
 
@@ -113,4 +113,3 @@ Changes:
 V0.9 Initial release by Martin Wisniowski (020200)
 known bugs:
 Bug at settiles-selection
-
