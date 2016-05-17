@@ -1,11 +1,15 @@
---[[ 
-Smoove V0.92
+--[[
+Smoove V0.93
 Pixel, Tile and Sprite Editor for PSPLua
 
 Copyright (c) 2006 020200
 http://smoove.node3000.de
 
-feb06mar06apr06sep06
+feb06mar06apr06sep06may16
+
+changes to V0.93:
+- Analog stick drift calibration feature:
+  older psp's can have issues with calibration of the analog stick. Added a features to re-calibrate the analog stick.
 
 changes to V0.92:
 - usb connect
@@ -16,7 +20,7 @@ changes to V0.91:
 - scroll mode at zoom
 - minor bugfixes (canvas errors at zoom mode, pixel shift at first row)
 
-changes to V0.9: 
+changes to V0.9:
 - quick load was replaced by quick save (keys L+R)
 - battery loading state at animation menu
 - enhanced datastructure (folder structure)
@@ -24,13 +28,9 @@ changes to V0.9:
 - minor bugfixes
 
 ToDo:
-- popup(ie. for quit/about)
+- confirm before quitting
 - settiles bugfixes + animtable
 - quick save color sel
-- enhancement of menucursor triggering
-- better filebrowsing
-- show tilesize?
-- save as bmp / single frames
 - advanced colorpicker
 
 V 1.0 wishlist
@@ -58,6 +58,9 @@ Smoove = {
 , pmy = 136
 , tilesizex = 32 -- min: 1, max: 58
 , tilesizey = 32 -- min: 1, max: 32
+, deadzone = 32
+, calibratex = 0 -- negative to positive value
+, calibratey = 0 -- negative to positive value
 , Playtiles = {ffx = 1, tfx = 5, ffy = 1, tfy = 1}
 , framex = 1
 , framey = 1
@@ -203,7 +206,7 @@ function Smoove:zoomContent(canvx,canvy,w,h, drawx, drawy, zoomfactor, drawgrid,
         self.zscr:drawLine(tx, drawy, tx, h*zoomfactor+drawy, gridcolor) -- vertical lines
         self.zscr:drawLine(drawx, ty, w*zoomfactor+drawx, ty, gridcolor) -- horizontal lines
       end
-      self.dscr:fillRect(tx-zoomfactor, ty-zoomfactor, zoomfactor, zoomfactor, self.canvas:pixel(canvx+x, canvy+y))    
+      self.dscr:fillRect(tx-zoomfactor, ty-zoomfactor, zoomfactor, zoomfactor, self.canvas:pixel(canvx+x, canvy+y))
     end
   end
 
@@ -211,25 +214,25 @@ end
 
 -- Zoom Edit --------------------------------------------
 function Smoove:ZoomEdit(cx, cy)
-  
+
   -- check if right border is valid
   local tilesx = self.tilesizex
-  if cx + tilesx >= 480 then  
+  if cx + tilesx >= 480 then
     tilesx = 479 - cx
     self.zscr:clear(self.None)
     self.dscr:clear(self.None)
   end
   -- check if bottom border is valid
   local tilesy = self.tilesizey
-  if cy + tilesy >= 272 then  
+  if cy + tilesy >= 272 then
     tilesy = 272 - cy
     self.zscr:clear(self.None)
     self.dscr:clear(self.None)
   end
-   
+
   Smoove:zoomContent(cx, cy, tilesx, tilesy, 8, 8)
 
-  while not Pad.tRl do  
+  while not Pad.tRl do
     Pad:Update()
     screen:blit(0, 0, self.whiteimg)
     screen:blit(0, 0, self.dscr)
@@ -240,33 +243,33 @@ function Smoove:ZoomEdit(cx, cy)
       self.mx, self.my = self:GetVel(self.mx, self.my, Pad.Rr or Pad.Rd, 8)
       -- zoom scroll
       if self.mx == 0 then
-        Smoove:drawBack(cx, cy, tilesx, self.tilesizey) 
+        Smoove:drawBack(cx, cy, tilesx, self.tilesizey)
         cx = cx - 1
         if cx < 0 then cx = 0 end
         Smoove:zoomContent(cx, cy, tilesx, self.tilesizey, 8, 8)
         self.mx = 4
       end
-      if self.mx >= tilesx*8+15 then 
+      if self.mx >= tilesx*8+15 then
         Smoove:drawBack(cx, cy, tilesx, self.tilesizey)
         cx = cx + 1
         if cx + tilesx >= 480 then cx = 479 - tilesx end
         Smoove:zoomContent(cx, cy, tilesx, self.tilesizey, 8, 8)
         self.mx = tilesx*8+12
       end
-      if self.my == 0 then 
+      if self.my == 0 then
         Smoove:drawBack(cx, cy, tilesx, self.tilesizey)
         cy = cy - 1
         if cy < 0 then cy = 0 end
         Smoove:zoomContent(cx, cy, tilesx, self.tilesizey, 8, 8)
         self.my = 4
       end
-      if self.my >= self.tilesizey*8+15 then 
+      if self.my >= self.tilesizey*8+15 then
         Smoove:drawBack(cx, cy, tilesx, self.tilesizey)
         cy = cy + 1
         if cy + self.tilesizey >= 272 then cy = 272 - self.tilesizey end
         Smoove:zoomContent(cx, cy, tilesx, self.tilesizey, 8, 8)
         self.my = self.tilesizey*8+12
-      end     
+      end
 
       if Pad.R1 then self.CurrentColor = screen:pixel(self.mx, self.my) end
       if Pad.Rr and (self.mx<(tilesx+2)*8) and (self.my<(self.tilesizey+2)*8)  then -- only draw inside grid + markers
@@ -284,7 +287,7 @@ function Smoove:ZoomEdit(cx, cy)
            end
         end
       end
-      self:DrawCursor(self.mx, self.my, self.CurrentColor)      
+      self:DrawCursor(self.mx, self.my, self.CurrentColor)
     end
     screen.waitVblankStart()
     screen.flip()
@@ -294,43 +297,43 @@ function Smoove:ZoomEdit(cx, cy)
     Pad:Update()
     screen.waitVblankStart()
   end
-  
+
   Smoove:drawBack(cx, cy, tilesx, self.tilesizey)
 
   -- copy buffer
   for x=0, tilesx-1 do
     for y=0, self.tilesizey-1 do
-      self.copyBuffer:pixel(x, y,  self.dscr:pixel(x*8+9, y*8+9)) 
+      self.copyBuffer:pixel(x, y,  self.dscr:pixel(x*8+9, y*8+9))
     end
-  end  
+  end
 
 end
 
 
 function Smoove:iterateFrames(reset)
-  if reset then 
-    self.framex = self.Playtiles.ffx 
+  if reset then
+    self.framex = self.Playtiles.ffx
     self.framey = self.Playtiles.ffy
     else self.framex = self.framex + 1
   end
-  if self.framex*self.tilesizex >= 480 then 
+  if self.framex*self.tilesizex >= 480 then
     self.framex = 1
-    self.framey = self.framey + 1    
-  end 
+    self.framey = self.framey + 1
+  end
 
-  if self.framex >= self.Playtiles.tfx and self.framey >= self.Playtiles.tfy then 
-    self.framex = self.Playtiles.ffx 
-    self.framey = self.Playtiles.ffy 
+  if self.framex >= self.Playtiles.tfx and self.framey >= self.Playtiles.tfy then
+    self.framex = self.Playtiles.ffx
+    self.framey = self.Playtiles.ffy
   end
 end
 
 
-function Smoove:animate()  
-  screen:blit(0, 0, self.whiteimg) 
-  
+function Smoove:animate()
+  screen:blit(0, 0, self.whiteimg)
+
   Smoove:drawRect(screen, 299, 8, self.tilesizex+1, self.tilesizey+1, self.Black)
   screen:blit(300,9, self.canvas, self.tilesizex*(self.framex-1)+1, self.tilesizey*(self.framey-1)+1, self.tilesizex, self.tilesizey)
-  
+
   if self.showzoom then
     Smoove:zoomContent(self.tilesizex*(self.framex-1), self.tilesizey*(self.framey-1), self.tilesizex, self.tilesizey, 8, 8, 3, false)
     screen:blit(8, 168, self.dscr, 8, 8, self.tilesizex*3, self.tilesizey*3)
@@ -341,9 +344,9 @@ function Smoove:animate()
   frametimer = frametimer + 1
   if (frametimer >= self.frate) then
     frametimer = 0
-    Smoove:iterateFrames()  
+    Smoove:iterateFrames()
   end
-  
+
 end
 
 
@@ -353,7 +356,7 @@ function Smoove:frameSize()
   Pad:Update()
   while not Pad.tRr do
     Pad:Update()
-    
+
     if Pad.tLr then self.tilesizex = self.tilesizex + 1 end
     if Pad.tLl then self.tilesizex = self.tilesizex - 1 end
     if Pad.tLu then self.tilesizey = self.tilesizey - 1 end
@@ -362,7 +365,7 @@ function Smoove:frameSize()
     if self.tilesizey > 32 then self.tilesizey = 32 end
     if self.tilesizex < 1 then self.tilesizex = 1 end
     if self.tilesizey < 1 then self.tilesizey = 1 end
- 
+
     Menu:changeEntry(Menu:getSelectedNum(), "frame size: " .. self.tilesizex .. "x" .. self.tilesizey)
     self:animate()
     screen.waitVblankStart()
@@ -404,7 +407,7 @@ function Smoove:setTiles()
   Pad:Update()
   self.mx = self.Playtiles.ffx*self.tilesizex-(self.tilesizex/2)
   self.my = self.Playtiles.ffy*self.tilesizey-(self.tilesizey/2)
-  
+
   while true do
     Pad:Update()
     screen:blit(0, 0, self.whiteimg)
@@ -412,7 +415,7 @@ function Smoove:setTiles()
 
     if Pad.Rd then break end
     if Pad.tRr then break end
-    
+
     Smoove:drawRect(screen, 0, 0, 480, 272, self.Settilecolor)
     if Pad.tRl then
       self.Playtiles.ffx = (self:Align(self.mx, self.tilesizex)/self.tilesizex)+1
@@ -432,7 +435,7 @@ function Smoove:setTiles()
 
    Smoove:iterateFrames(1)
     for i = 1, 100 do
-      Smoove:drawRect(screen, (self.framex-1)*self.tilesizex, (self.framey-1)*self.tilesizey, self.tilesizex, self.tilesizey, self.Settilecolor) 
+      Smoove:drawRect(screen, (self.framex-1)*self.tilesizex, (self.framey-1)*self.tilesizey, self.tilesizex, self.tilesizey, self.Settilecolor)
       Smoove:iterateFrames()
     end
 
@@ -442,7 +445,7 @@ function Smoove:setTiles()
 
     screen.waitVblankStart()
     screen.flip()
-  end 
+  end
   Smoove:iterateFrames(1)
 end
 
@@ -450,12 +453,12 @@ function Smoove:framerate()
   Menu:Cue()
   Pad:Update()
   while not Pad.tRr do
-    Pad:Update()    
+    Pad:Update()
     if Pad.tLr then self.frate = self.frate + 1 end
     if Pad.tLl then self.frate = self.frate - 1 end
     if self.frate < 1 then self.frate = 1 end
     Menu:changeEntry(Menu:getSelectedNum(), "framerate: " .. 60/self.frate)
-    screen:blit(0, 0, self.whiteimg) 
+    screen:blit(0, 0, self.whiteimg)
 
     self:animate()
     screen.waitVblankStart()
@@ -466,28 +469,50 @@ end
 
 function Smoove:showTilesize()
   local show
-  if self.showsize then 
+  if self.showsize then
     self.showsize = false
     show = "no"
-  else 
+  else
     self.showsize = true
     show = "yes"
   end
-  
+
   Menu:changeEntry(Menu:getSelectedNum(), "show tilesize: " .. show)
 end
 
 function Smoove:showZoom()
    local show
-   if self.showzoom then 
+   if self.showzoom then
     self.showzoom = false
     show = "no"
-  else 
+  else
     self.showzoom= true
     show = "yes"
   end
-  
+
   Menu:changeEntry(Menu:getSelectedNum(), "show zoom: " .. show)
+end
+
+function Smoove:calibrateStick()
+  Menu:Cue()
+  Pad:Update()
+  while not Pad.tRr do
+    Pad:Update()
+
+    if Pad.tLr then self.calibratex = self.calibratex + 1 end
+    if Pad.tLl then self.calibratex = self.calibratex - 1 end
+    if Pad.tLu then self.calibratey = self.calibratey - 1 end
+    if Pad.tLd then self.calibratey = self.calibratey + 1 end
+
+    Pad:analogCalibration(self.deadzone, self.calibratex, self.calibratey)
+
+    Menu:changeEntry(Menu:getSelectedNum(), "calibrate analog stick x: " .. self.calibratex .. " y: " .. self.calibratey)
+    self:animate()
+    screen.waitVblankStart()
+    screen.flip()
+   end
+   self.dscr:clear(self.None)
+   Menu:Uncue()
 end
 
 function Smoove:usbConnect()
@@ -495,7 +520,7 @@ function Smoove:usbConnect()
   System.usbDiskModeActivate()
   Menu:Cue()
   Menu:changeEntry(Menu:getSelectedNum(), "connected...")
-    
+
   while not Pad.tRr do
     Pad:Update()
     Menu:drawMenu()
@@ -511,10 +536,10 @@ function Smoove:info()
   Menu:Cue()
   Pad:Update()
   while not Pad.tRr do
-    Pad:Update()    
-    
+    Pad:Update()
+
     Menu:changeEntry(Menu:getSelectedNum(), "http://smoove.node3000.de")
-    screen:blit(0, 0, self.whiteimg) 
+    screen:blit(0, 0, self.whiteimg)
 
     self:animate()
     screen.waitVblankStart()
@@ -547,6 +572,7 @@ function Smoove:AnimateMenu()
        elseif num == "settiles" then Smoove:setTiles()
        elseif num == "framerate" then Smoove:framerate()
        elseif num == "showtilesize" then Smoove:showTilesize()
+       elseif num == "calibrate" then Smoove:calibrateStick()
        elseif num == "showzoom" then Smoove:showZoom()
        elseif num == "usbconnect" then Smoove:usbConnect()
        elseif num == "info" then Smoove:info()
@@ -563,7 +589,7 @@ end
 -- Init -------------------------------------------------
 function Smoove:Init()
   Menu:clearAll()
-  Menu:setSize(0, 0, 270, 130)
+  Menu:setSize(0, 0, 285, 130)
   Menu:setStyle(Color.new(175,20,255), Color.new(0,0,0), Color.new(255,255,0), Color.new(255,255,150), Color.new(255,255,255,255))
   Menu:addEntry("framesize", "frame size: " .. self.tilesizex .. "x" .. self.tilesizey)
   Menu:addEntry("open", "open")
@@ -574,17 +600,18 @@ function Smoove:Init()
   Menu:addEntry("framerate", "framerate: " .. 60/self.frate)
   Menu:addEntry("showtilesize", "show tilesize: yes" )
   Menu:addEntry("showzoom", "show zoom: no" )
+  Menu:addEntry("calibrate", "calibrate analog stick x: " .. self.calibratex .. " y: " .. self.calibratey )
   Menu:addEntry("usbconnect", "connect to usb" )
   Menu:addEntry("info", "info" )
 end
 
 
 -- Main -------------------------------------------------
-function Smoove:Main()  
+function Smoove:Main()
   local ox, oy
 
   Smoove:Init()
-  
+
   if self.zscr == nil then
     self.dscr = Image.createEmpty(480, 272)
     self.zscr = Image.createEmpty(480, 272)
@@ -605,10 +632,10 @@ function Smoove:Main()
   while not Pad.tSt do
    Pad:Update()
 
-    if Pad.R1 and Pad.L1 then 
+    if Pad.R1 and Pad.L1 then
       if self.mapname == nil then Smoove:saveAs() else Smoove:save() end
     end
-      
+
     screen:blit(0, 0, self.whiteimg)
     self.canvas:fillRect(0, 261, 40, 12, self.White) -- showframesize
     if self.showsize then self.canvas:print(1, 263, self.tilesizex.."x"..self.tilesizey) end
@@ -617,7 +644,7 @@ function Smoove:Main()
     if Pad.Ru then
       self:SelectColor()
     else
-      
+
       if Pad.tSl then self:AnimateMenu() end
       self.mx, self.my = self:GetVel(self.mx, self.my, Pad.Rr or Pad.Rd)
       if Pad.R1 then self.CurrentColor = screen:pixel(self.mx, self.my) end
@@ -637,15 +664,15 @@ function Smoove:Main()
       end
       self:DrawCursor(self.mx, self.my, self.CurrentColor)
     end
-   
+
     screen.waitVblankStart()
     screen.flip()
   end
 
-  if not Pad.Lu then 
+  if not Pad.Lu then
     if self.mapname == nil then Smoove:saveAs() else Smoove:save() end
   end
-  Pad:Update()  
+  Pad:Update()
 end
 
 do Smoove:Main() end

@@ -9,6 +9,9 @@
 
 Pad = {
   UseAnalog = string.find(System.currentDirectory(), "/cygdrive/") == nil
+, analogDeadZone = 32
+, analogCalibrateX = 0
+, analogCalibrateY = 0
 , cLu = 0
 , cLd = 0
 , cLl = 0
@@ -65,6 +68,12 @@ function Pad:GetRv()
   return 0
 end
 
+function Pad:analogCalibration(deadzone, calibrateX, calibrateY)
+  self.analogDeadZone = deadzone or 32
+  self.analogCalibrateX = calibrateX or 0
+  self.analogCalibrateY = calibrateY or 0
+end
+
 function Pad:Update()
   local Push = Controls.read()
   local fl, fr, fx = false, false, false
@@ -79,8 +88,8 @@ function Pad:Update()
   end
 
   if self.UseAnalog then
-    self.Ax = CalcDeadZone(Push:analogX(), 32)
-    self.Ay = CalcDeadZone(Push:analogY(), 32)
+    self.Ax = CalcDeadZone(Push:analogX() + self.analogCalibrateX, self.analogDeadZone)
+    self.Ay = CalcDeadZone(Push:analogY() + self.analogCalibrateY, self.analogDeadZone)
     if self.Ax ~= 0 or self.Ay ~= 0 then fl = true end
   else
     self.Ax = 0
