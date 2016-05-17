@@ -1,0 +1,220 @@
+--[[ 
+Option menu Lua Class
+Martin Wisniowski (020200)
+March 2006 Berlin..Kaiserslautern
+http://www.node3000.de/020200/port.php
+]]--
+
+require "includes/pad.lc"
+
+Menu = {
+   x = 120
+,  y = 50
+,  w = 120
+,  h = 80
+,  Textcolor = Color.new(175,20,255)
+,  Selectcolor = Color.new(0,0,0)
+,  Hovercolor = Color.new(255,255,0)
+,  Cuecolor = Color.new(255,180,0)
+,  Menucolor = Color.new(255,255,255, 255)
+,  cue = false
+,  ids = {}
+,  entries = {}
+,  entry = 0
+,  selected = 1
+}
+
+function Menu:clearAll()
+  self.cue = false
+  self.ids = {}
+  self.entries = {}
+  self.entry = 0
+  self.selected = 1
+end
+
+function Menu:setSize(x, y, w, h)  
+  self.x, self.y, self.w, self.h = x, y, w, h
+end
+
+
+function Menu:setStyle(textcol, selcol, hovercol, cuecol, menucol)  
+  self.Textcolor, self.Selectcolor, self.Hovercolor, self.Cuecolor, self.Menucolor = textcol, selcol, hovercol, cuecol, menucol
+end
+
+
+function Menu:drawMenu() 
+  screen:fillRect(self.x, self.y, self.w, self.h, self.Menucolor)
+  for i = 1, self.entry do
+    if self.selected == i then
+       if cue then screen:fillRect(self.x+10, self.y+(i*10), self.w-20, 10, self.Cuecolor) 
+       else screen:fillRect(self.x+10, self.y+(i*10), self.w-20, 10, self.Hovercolor) end
+       screen:print(self.x+10, self.y+(i*10), self.entries[i], self.Selectcolor) 
+    else screen:print(self.x+10, self.y+(i*10), self.entries[i], self.Textcolor) end
+  end
+end
+
+
+function Menu:addEntry (id, text)
+  self.entry = self.entry +1
+  self.ids[self.entry] = id
+  self.entries[self.entry] = text
+end
+
+
+function Menu:changeEntry (pos, text)
+  self.entries[pos] = text
+end
+
+
+function Menu:moveUp()
+  self.selected = self.selected - 1
+  if self.selected <= 0 then self.selected = self.entry end  
+end
+
+
+function Menu:moveDown()
+  self.selected = self.selected + 1
+  if self.selected > self.entry then self.selected = 1 end
+end
+
+
+function Menu:getSelectedNum()
+  return self.selected
+end
+
+
+function Menu:getSelectedId()
+  return self.ids[self.selected]
+end
+
+
+function Menu:Cue()
+  cue  = true
+end
+
+function Menu:Uncue()
+  cue  = false
+end
+
+-- filebrowser functions
+function Menu:browseFiles(mask, path)
+  local folder = System.currentDirectory().."/"..path
+  local files = System.listDirectory(folder)
+  local i = 1
+  Pad:Update()
+  -- filter list
+  repeat
+    local file = files[i]
+    file.name = string.upper(file.name)
+    if (mask and not string.find(file.name, mask)) then
+      table.remove(files, i)
+      i = 1
+    else
+      i = i + 1
+    end
+  until i > table.getn(files)
+  -- do stuff    
+  while true do
+    Pad:Update()
+    if Pad.tLd then i = i + 1 end
+    if Pad.tLu then i = i - 1 end
+    if i > table.getn(files) then i = table.getn(files) end
+    if i < 1 then i = 1 end
+    screen:fillRect(0, 0, 480, 272, self.Menucolor)
+    screen:fillRect(0, self.y+(i*10), 480, 10, Color.new(200,200,200))
+    for index, file in files do
+      screen:print(10,index*10, file.name)
+    end
+    
+    screen.waitVblankStart()
+    screen:flip()
+    
+    if Pad.tRr then 
+      return files[i].name
+    end
+  
+    if Pad.tRd then
+      return nil
+    end
+  end
+end
+
+function Menu:enterName(defname)
+  local name = string.upper(defname)
+  local chartable = {0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z}
+  local nametable = {}
+  local i = 1
+  local p = 1
+  
+  repeat
+    nametable[i] = string.byte(name,i)
+    i = i + 1
+  until i > string.len(name)-4
+
+  while true do
+    Pad:Update()
+  
+    local tmptable = {}
+    for i=1,table.getn(nametable) do tmptable[i] = string.char(nametable[i]) end
+    name = table.concat(tmptable)..".PNG"
+
+    screen:fillRect(0, 0, 480, 272, self.Menucolor)
+    screen:print(10, 10, "save as..")
+    screen:print(10, 20, name)
+    
+    i = 1
+    repeat
+    if i == p then 
+      screen:fillRect(100+(i*15), 10, 10, 10, Color.new(0,0,0))
+      screen:print(100+(i*15), 10, string.char(nametable[i]), Color.new(255,255,255))
+    else screen:print(100+(i*15), 10, string.char(nametable[i])) end
+    i = i + 1
+    until i > table.getn(nametable)  
+
+    screen.waitVblankStart()
+    screen:flip() 
+      
+    if Pad.tLr then 
+      p = p + 1
+      if p > table.getn(nametable) then p = table.getn(nametable) end
+    end
+
+    if Pad.tLl then 
+      p = p - 1
+      if p < 1 then p = 1 end
+    end
+    
+    if Pad.tRu then
+      table.insert(nametable, p, nametable[p])
+    end
+    
+    if Pad.tRl then
+      if table.getn(nametable) > 1 then table.remove(nametable, p) end
+      if p > table.getn(nametable) then p = table.getn(nametable) end
+    end
+
+    if Pad.tLu then 
+      local char = nametable[p]
+      char = char + 1
+      if char == 58 then char = 65 end
+      if char > 90 then char = 90 end
+      nametable[p] = char
+    end
+    
+    if Pad.tLd then 
+      local char = nametable[p]
+      char = char - 1
+      if char < 48 then char = 48 end
+      if char == 64 then char = 57 end
+      nametable[p] = char  
+    end
+
+    if Pad.tRr then 
+      return name
+    end
+    
+    if Pad.tRd then
+      return nil
+    end
+  end
+end
