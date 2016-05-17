@@ -1,8 +1,8 @@
 Smoove V0.92
 
-Pixel, Tile and Spriteeditor fpr PSPLua.
-(c) 2006 Martin Wisniowski (020200)
-http://smoove.node3000.de
+Pixel, Tile and Spriteeditor for PSPLua.
+(c) 2006 Martin Wisniowski (020200 aka Nodepond)
+http://digitaltools.node3000.com/downloads/smoove/
 
 
 ///////////////////////////////////////WHAT IS SMOOVE?/////////
