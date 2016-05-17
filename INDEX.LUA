@@ -538,7 +538,7 @@ function Smoove:info()
   while not Pad.tRr do
     Pad:Update()
 
-    Menu:changeEntry(Menu:getSelectedNum(), "http://smoove.node3000.de")
+    Menu:changeEntry(Menu:getSelectedNum(), "http://digitaltools.node3000.com/downloads/smoove/")
     screen:blit(0, 0, self.whiteimg)
 
     self:animate()
