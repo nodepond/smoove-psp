@@ -2,8 +2,8 @@
 Smoove V0.93
 Pixel, Tile and Sprite Editor for PSPLua
 
-Copyright (c) 2006 020200
-http://smoove.node3000.de
+Copyright (c) 2006 - 2016 020200 aka Nodepond
+http://digitaltools.node3000.com/downloads/smoove/
 
 feb06mar06apr06sep06may16
 

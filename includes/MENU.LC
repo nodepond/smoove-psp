@@ -1,8 +1,9 @@
---[[ 
+--[[
 Option menu Lua Class
-Martin Wisniowski (020200)
+Martin Wisniowski (020200 aka Nodepond)
 March 2006 Berlin..Kaiserslautern
-http://www.node3000.de/020200/port.php
+May 2016 Cologne
+http://www.nodepond.com
 ]]--
 
 require "includes/pad.lc"
@@ -32,23 +33,23 @@ function Menu:clearAll()
   self.selected = 1
 end
 
-function Menu:setSize(x, y, w, h)  
+function Menu:setSize(x, y, w, h)
   self.x, self.y, self.w, self.h = x, y, w, h
 end
 
 
-function Menu:setStyle(textcol, selcol, hovercol, cuecol, menucol)  
+function Menu:setStyle(textcol, selcol, hovercol, cuecol, menucol)
   self.Textcolor, self.Selectcolor, self.Hovercolor, self.Cuecolor, self.Menucolor = textcol, selcol, hovercol, cuecol, menucol
 end
 
 
-function Menu:drawMenu() 
+function Menu:drawMenu()
   screen:fillRect(self.x, self.y, self.w, self.h, self.Menucolor)
   for i = 1, self.entry do
     if self.selected == i then
-       if cue then screen:fillRect(self.x+10, self.y+(i*10), self.w-20, 10, self.Cuecolor) 
+       if cue then screen:fillRect(self.x+10, self.y+(i*10), self.w-20, 10, self.Cuecolor)
        else screen:fillRect(self.x+10, self.y+(i*10), self.w-20, 10, self.Hovercolor) end
-       screen:print(self.x+10, self.y+(i*10), self.entries[i], self.Selectcolor) 
+       screen:print(self.x+10, self.y+(i*10), self.entries[i], self.Selectcolor)
     else screen:print(self.x+10, self.y+(i*10), self.entries[i], self.Textcolor) end
   end
 end
@@ -68,7 +69,7 @@ end
 
 function Menu:moveUp()
   self.selected = self.selected - 1
-  if self.selected <= 0 then self.selected = self.entry end  
+  if self.selected <= 0 then self.selected = self.entry end
 end
 
 
@@ -113,7 +114,7 @@ function Menu:browseFiles(mask, path)
       i = i + 1
     end
   until i > table.getn(files)
-  -- do stuff    
+  -- do stuff
   while true do
     Pad:Update()
     if Pad.tLd then i = i + 1 end
@@ -125,14 +126,14 @@ function Menu:browseFiles(mask, path)
     for index, file in files do
       screen:print(10,index*10, file.name)
     end
-    
+
     screen.waitVblankStart()
     screen:flip()
-    
-    if Pad.tRr then 
+
+    if Pad.tRr then
       return files[i].name
     end
-  
+
     if Pad.tRd then
       return nil
     end
@@ -145,7 +146,7 @@ function Menu:enterName(defname)
   local nametable = {}
   local i = 1
   local p = 1
-  
+
   repeat
     nametable[i] = string.byte(name,i)
     i = i + 1
@@ -153,7 +154,7 @@ function Menu:enterName(defname)
 
   while true do
     Pad:Update()
-  
+
     local tmptable = {}
     for i=1,table.getn(nametable) do tmptable[i] = string.char(nametable[i]) end
     name = table.concat(tmptable)..".PNG"
@@ -161,58 +162,58 @@ function Menu:enterName(defname)
     screen:fillRect(0, 0, 480, 272, self.Menucolor)
     screen:print(10, 10, "save as..")
     screen:print(10, 20, name)
-    
+
     i = 1
     repeat
-    if i == p then 
+    if i == p then
       screen:fillRect(100+(i*15), 10, 10, 10, Color.new(0,0,0))
       screen:print(100+(i*15), 10, string.char(nametable[i]), Color.new(255,255,255))
     else screen:print(100+(i*15), 10, string.char(nametable[i])) end
     i = i + 1
-    until i > table.getn(nametable)  
+    until i > table.getn(nametable)
 
     screen.waitVblankStart()
-    screen:flip() 
-      
-    if Pad.tLr then 
+    screen:flip()
+
+    if Pad.tLr then
       p = p + 1
       if p > table.getn(nametable) then p = table.getn(nametable) end
     end
 
-    if Pad.tLl then 
+    if Pad.tLl then
       p = p - 1
       if p < 1 then p = 1 end
     end
-    
+
     if Pad.tRu then
       table.insert(nametable, p, nametable[p])
     end
-    
+
     if Pad.tRl then
       if table.getn(nametable) > 1 then table.remove(nametable, p) end
       if p > table.getn(nametable) then p = table.getn(nametable) end
     end
 
-    if Pad.tLu then 
+    if Pad.tLu then
       local char = nametable[p]
       char = char + 1
       if char == 58 then char = 65 end
       if char > 90 then char = 90 end
       nametable[p] = char
     end
-    
-    if Pad.tLd then 
+
+    if Pad.tLd then
       local char = nametable[p]
       char = char - 1
       if char < 48 then char = 48 end
       if char == 64 then char = 57 end
-      nametable[p] = char  
+      nametable[p] = char
     end
 
-    if Pad.tRr then 
+    if Pad.tRr then
       return name
     end
-    
+
     if Pad.tRd then
       return nil
     end
